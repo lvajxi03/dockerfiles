@@ -1,6 +1,8 @@
 # ci-toolbox Dockerfile
 # Generate image for hatamoto (executed by kaniko)
 
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
 FROM debian:bookworm-slim
 
 RUN apt update && apt install -y \
