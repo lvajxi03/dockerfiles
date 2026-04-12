@@ -1,5 +1,5 @@
 # ci-toolbox Dockerfile
-# Generate image for hatamoto builds.
+# Generate image for hatamoto (executed by kaniko)
 
 FROM debian:bookworm-slim
 
