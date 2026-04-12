@@ -1,3 +1,6 @@
+# ci-toolbox Dockerfile
+# Generate image for hatamoto builds.
+
 FROM debian:bookworm-slim
 
 RUN apt update && apt install -y \
