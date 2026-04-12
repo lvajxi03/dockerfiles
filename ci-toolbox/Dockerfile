@@ -11,7 +11,6 @@ RUN apt update && apt install -y \
     python3 \
     python3-pip \
     python3-venv \
-    ansible \
     openssh-client \
  && rm -rf /var/lib/apt/lists/*
 
@@ -30,7 +29,7 @@ RUN curl -L -o /tmp/hugo.tar.gz \
  && rm -rf /tmp/hugo.tar.gz
 
 # ---- sanity ----
-RUN git --version && ansible --version && hugo version
+RUN git --version && hugo version
 
 WORKDIR /workspace
 
