@@ -1,13 +1,10 @@
 # ci-toolbox Dockerfile
 # Generate image for hatamoto (executed by kaniko)
 
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
-
 FROM debian:bookworm-slim
 
 RUN apt update && apt install -y \
-    git curl python3 python3-pip ca-certificates \
- && pip3 install ansible
+    git curl ca-certificates ansible
 
 ARG HUGO_VERSION=0.159.2
 
