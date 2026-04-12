@@ -9,7 +9,6 @@ RUN apt update && apt install -y \
 
 ARG HUGO_VERSION=0.159.2
 
-# Hugo needs to be downloaded manually:
 RUN curl -L -o /tmp/hugo.tar.gz \
     https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-arm64.tar.gz \
  && tar -xzf /tmp/hugo.tar.gz -C /usr/local/bin \
