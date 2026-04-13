@@ -14,7 +14,7 @@ RUN jenkins-plugin-cli --plugins \
     workflow-job \
     workflow-aggregator \
     git \
-    remoting
+    configuration-as-code
 
 USER jenkins
 
