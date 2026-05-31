@@ -1,0 +1,76 @@
+pipeline {
+    agent {
+        label 'base-builder'
+    }
+
+    parameters {
+        string(
+            name: 'GO_VERSION',
+            defaultValue: '1.24.0',
+            description: 'Wersja Go do zainstalowania w obrazie go-builder'
+        )
+    }
+
+    environment {
+        IMAGE_NAME = 'registry.lab.local/go-builder'
+    }
+
+    stages {
+        stage('Prepare') {
+            steps {
+                script {
+                    env.GIT_SHA = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    env.IMAGE_TAG = params.GO_VERSION
+
+                    currentBuild.displayName = "#${env.BUILD_NUMBER} go-${params.GO_VERSION}"
+                    currentBuild.description = "go-builder:${params.GO_VERSION}, commit ${env.GIT_SHA}"
+                }
+
+                sh '''
+                    echo "GO_VERSION=${GO_VERSION}"
+                    echo "GIT_SHA=${GIT_SHA}"
+                    echo "IMAGE=${IMAGE_NAME}:${IMAGE_TAG}"
+                '''
+            }
+        }
+
+        stage('Build image') {
+            steps {
+                sh '''
+                    docker build \
+                      --build-arg GO_VERSION=${GO_VERSION} \
+                      -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                      .
+                '''
+            }
+        }
+
+        stage('Push image') {
+            steps {
+                sh '''
+                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Inspect') {
+            steps {
+                sh '''
+                    docker run --rm ${IMAGE_NAME}:${IMAGE_TAG} go version
+                    docker run --rm ${IMAGE_NAME}:${IMAGE_TAG} uname -m
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Built and pushed ${IMAGE_NAME}:${IMAGE_TAG}"
+        }
+    }
+}
+
