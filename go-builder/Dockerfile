@@ -1,0 +1,21 @@
+FROM golang:1.24-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    openssh-client \
+    ca-certificates \
+    curl \
+    wget \
+    jq \
+    make \
+    rsync \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN update-ca-certificates
+
+USER root
+
+WORKDIR /workspace
+
+CMD ["sleep", "infinity"]
+
