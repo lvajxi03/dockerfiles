@@ -5,6 +5,10 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  hostAliases:
+      - ip: "10.10.10.24"
+        hostnames:
+          - "registry.lab.local"
   containers:
     - name: base
       image: registry.lab.local/base-builder:0.1
