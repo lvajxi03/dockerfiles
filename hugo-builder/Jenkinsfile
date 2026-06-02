@@ -1,0 +1,90 @@
+pipeline {
+    agent {
+	kubernetes {
+	    yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  hostAliases:
+      - ip: "10.10.10.24"
+        hostnames:
+          - "registry.lab.local"
+  containers:
+    - name: base
+      image: registry.lab.local/base-builder:0.1
+      command: ["sleep"]
+      args: ["infinity"]
+    - name: kaniko
+      image: registry.lab.local/kaniko-builder:latest
+      command: ["sleep"]
+      args: ["infinity"]
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
+  volumes:
+    - name: docker-config
+      configMap:
+        name: kaniko-docker-config
+'''
+	}
+    }
+
+    parameters {
+	string(
+	    name: 'HUGO_VERSION',
+	    defaultValue: '0.161.1',
+	    description: 'Wersja Hugo dla obrazu hugo-builder')
+    }
+
+    environment {
+	IMAGE_NAME = 'registry.lab.local/hugo-builder'
+    }
+
+    stages {
+	stage('Prepare') {
+	    steps {
+		container('base') {
+		    script {
+			env.GIT_SHA = sh(
+			    script: 'git rev-parse --short HEAD',
+			    returnStdout: true
+			).trim()
+
+			env.IMAGE_TAG = params.HUGO_VERSION
+			currentBuild.displayName = "#${env.BUILD_NUMBER} hugo-${params.HUGO_VERSION}"
+			currentBuild.description = "hugo-builder:${params.HUGO_VERSION}, commit ${env.GIT_SHA}"
+		    }
+
+		    sh '''
+            echo "HUGO_VERSION=${HUGO_VERSION}"
+            echo "IMAGE=${IMAGE_NAME}:${IMAGE_TAG}"
+            ls -la
+          '''
+		}
+	    }
+	}
+
+	stage('Build and push image') {
+	    steps {	
+		container('kaniko') {
+		    sh '''
+            /kaniko/executor \
+              --context "${WORKSPACE}" \
+              --dockerfile "${WORKSPACE}/hugo-builder/Dockerfile" \
+              --build-arg HUGO_VERSION="${HUGO_VERSION}" \
+              --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
+              --insecure \
+              --skip-tls-verify \
+              --insecure-registry registry.lab.local
+          '''
+		}
+	    }
+	}
+    }
+
+    post {
+	success {
+	    echo "Built and pushed ${IMAGE_NAME}:${IMAGE_TAG}"
+	}
+    }
+}
