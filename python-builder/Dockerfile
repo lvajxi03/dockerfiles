@@ -2,10 +2,9 @@ FROM registry.lab.local/base-builder:0.1
 
 USER root
 
-ARG PYTHON_VERSION=3.12
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python${PYTHON_VERSION} \
+    python3 \
     python3-pip \
     python3-venv \
     python3-build \

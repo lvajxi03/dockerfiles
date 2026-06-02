@@ -28,16 +28,10 @@ spec:
 '''
 	}
     }
-    parameters {
-	string(
-	    name: 'PYTHON_VERSION',
-	    defaultValue: '3.12',
-	    description: 'Wersja Pythona dla obrazu python-builder'
-	)
-    }
 
     environment {
 	IMAGE_NAME = 'registry.lab.local/python-builder'
+	IMAGE_TAG = '3'
     }
 
     stages {
@@ -50,13 +44,11 @@ spec:
 			    returnStdout: true
 			).trim()
 
-			env.IMAGE_TAG = params.PYTHON_VERSION
-			currentBuild.displayName = "#${env.BUILD_NUMBER} python-${params.PYTHON_VERSION}"
-			currentBuild.description = "python-builder:${params.PYTHON_VERSION}, commit ${env.GIT_SHA}"
+			currentBuild.displayName = "#${env.BUILD_NUMBER} python-3"
+			currentBuild.description = "python-builder:3, commit ${env.GIT_SHA}"
 		    }
 
 		    sh '''
-            echo "PYTHON_VERSION=${PYTHON_VERSION}"
             echo "IMAGE=${IMAGE_NAME}:${IMAGE_TAG}"
             ls -la
           '''
@@ -71,7 +63,6 @@ spec:
             /kaniko/executor \
               --context "${WORKSPACE}" \
               --dockerfile "${WORKSPACE}/python-builder/Dockerfile" \
-              --build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
               --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
               --insecure \
               --skip-tls-verify \
