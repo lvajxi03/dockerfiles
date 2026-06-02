@@ -2,7 +2,7 @@ FROM registry.lab.local/base-builder:0.1
 
 USER root
 
-ARG HUGO_VERSION=0.161.1
+ARG HUGO_VERSION=0.162.1
 
 RUN curl -fsSL -o /tmp/hugo.tar.gz \
     "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-arm64.tar.gz" \
