@@ -75,7 +75,7 @@ spec:
               --build-arg GO_VERSION="${GO_VERSION}" \
               --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
               --insecure \
-              --skip-tls-verify
+              --skip-tls-verify \
               --insecure-registry registry.lab.local
           '''
 		}
