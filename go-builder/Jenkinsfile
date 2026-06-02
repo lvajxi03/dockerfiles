@@ -67,7 +67,7 @@ spec:
 		    sh '''
             /kaniko/executor \
               --context "${WORKSPACE}" \
-              --dockerfile "${WORKSPACE}/Dockerfile" \
+              --dockerfile "${WORKSPACE}/go-builder/Dockerfile" \
               --build-arg GO_VERSION="${GO_VERSION}" \
               --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
               --insecure \
