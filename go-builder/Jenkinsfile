@@ -1,7 +1,7 @@
 pipeline {
-  agent {
-    kubernetes {
-      yaml '''
+    agent {
+	kubernetes {
+	    yaml '''
 apiVersion: v1
 kind: Pod
 spec:
@@ -11,10 +11,9 @@ spec:
       command: ["sleep"]
       args: ["infinity"]
     - name: kaniko
-      image: gcr.io/kaniko-project/executor:latest
-      command:
-        - /bin/cat
-      tty: true
+      image: registry.lab.local/kaniko-builder:latest
+      command: ["sleep"]
+      args: ["infinity"]
       volumeMounts:
         - name: docker-config
           mountPath: /kaniko/.docker
@@ -23,49 +22,49 @@ spec:
       configMap:
         name: kaniko-docker-config
 '''
+	}
     }
-  }
 
-  parameters {
-    string(
-      name: 'GO_VERSION',
-      defaultValue: '1.24.0',
-      description: 'Wersja Go dla obrazu go-builder'
-    )
-  }
+    parameters {
+	string(
+	    name: 'GO_VERSION',
+	    defaultValue: '1.24.0',
+	    description: 'Wersja Go dla obrazu go-builder'
+	)
+    }
 
-  environment {
-    IMAGE_NAME = 'registry.lab.local/go-builder'
-  }
+    environment {
+	IMAGE_NAME = 'registry.lab.local/go-builder'
+    }
 
-  stages {
-    stage('Prepare') {
-      steps {
-        container('base') {
-          script {
-            env.GIT_SHA = sh(
-              script: 'git rev-parse --short HEAD',
-              returnStdout: true
-            ).trim()
+    stages {
+	stage('Prepare') {
+	    steps {
+		container('base') {
+		    script {
+			env.GIT_SHA = sh(
+			    script: 'git rev-parse --short HEAD',
+			    returnStdout: true
+			).trim()
 
-            env.IMAGE_TAG = params.GO_VERSION
-            currentBuild.displayName = "#${env.BUILD_NUMBER} go-${params.GO_VERSION}"
-            currentBuild.description = "go-builder:${params.GO_VERSION}, commit ${env.GIT_SHA}"
-          }
+			env.IMAGE_TAG = params.GO_VERSION
+			currentBuild.displayName = "#${env.BUILD_NUMBER} go-${params.GO_VERSION}"
+			currentBuild.description = "go-builder:${params.GO_VERSION}, commit ${env.GIT_SHA}"
+		    }
 
-          sh '''
+		    sh '''
             echo "GO_VERSION=${GO_VERSION}"
             echo "IMAGE=${IMAGE_NAME}:${IMAGE_TAG}"
             ls -la
           '''
-        }
-      }
-    }
+		}
+	    }
+	}
 
-    stage('Build and push image') {
-      steps {
-        container('kaniko') {
-          sh '''
+	stage('Build and push image') {
+	    steps {	
+		container('kaniko') {
+		    sh '''
             /kaniko/executor \
               --context "${WORKSPACE}" \
               --dockerfile "${WORKSPACE}/Dockerfile" \
@@ -73,15 +72,16 @@ spec:
               --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
               --insecure \
               --skip-tls-verify
+              --insecure-registry registry.lab.local
           '''
-        }
-      }
+		}
+	    }
+	}
     }
-  }
 
-  post {
-    success {
-      echo "Built and pushed ${IMAGE_NAME}:${IMAGE_TAG}"
+    post {
+	success {
+	    echo "Built and pushed ${IMAGE_NAME}:${IMAGE_TAG}"
+	}
     }
-  }
 }
