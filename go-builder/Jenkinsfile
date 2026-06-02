@@ -1,0 +1,91 @@
+pipeline {
+    agent {
+	kubernetes {
+	    yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  hostAliases:
+      - ip: "10.10.10.24"
+        hostnames:
+          - "registry.lab.local"
+  containers:
+    - name: base
+      image: registry.lab.local/base-builder:0.1
+      command: ["sleep"]
+      args: ["infinity"]
+    - name: kaniko
+      image: registry.lab.local/kaniko-builder:latest
+      command: ["sleep"]
+      args: ["infinity"]
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
+  volumes:
+    - name: docker-config
+      configMap:
+        name: kaniko-docker-config
+'''
+	}
+    }
+
+    parameters {
+	string(
+	    name: 'GO_VERSION',
+	    defaultValue: '1.24.0',
+	    description: 'Wersja Go dla obrazu go-builder'
+	)
+    }
+
+    environment {
+	IMAGE_NAME = 'registry.lab.local/go-builder'
+    }
+
+    stages {
+	stage('Prepare') {
+	    steps {
+		container('base') {
+		    script {
+			env.GIT_SHA = sh(
+			    script: 'git rev-parse --short HEAD',
+			    returnStdout: true
+			).trim()
+
+			env.IMAGE_TAG = params.GO_VERSION
+			currentBuild.displayName = "#${env.BUILD_NUMBER} go-${params.GO_VERSION}"
+			currentBuild.description = "go-builder:${params.GO_VERSION}, commit ${env.GIT_SHA}"
+		    }
+
+		    sh '''
+            echo "GO_VERSION=${GO_VERSION}"
+            echo "IMAGE=${IMAGE_NAME}:${IMAGE_TAG}"
+            ls -la
+          '''
+		}
+	    }
+	}
+
+	stage('Build and push image') {
+	    steps {	
+		container('kaniko') {
+		    sh '''
+            /kaniko/executor \
+              --context "${WORKSPACE}" \
+              --dockerfile "${WORKSPACE}/go-builder/Dockerfile" \
+              --build-arg GO_VERSION="${GO_VERSION}" \
+              --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
+              --insecure \
+              --skip-tls-verify \
+              --insecure-registry registry.lab.local
+          '''
+		}
+	    }
+	}
+    }
+
+    post {
+	success {
+	    echo "Built and pushed ${IMAGE_NAME}:${IMAGE_TAG}"
+	}
+    }
+}
