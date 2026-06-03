@@ -17,5 +17,7 @@ USER root
 
 WORKDIR /workspace
 
+RUN go version
+
 CMD ["sleep", "infinity"]
 

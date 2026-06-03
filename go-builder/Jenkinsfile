@@ -44,13 +44,13 @@ spec:
 			).trim()
 
 			env.IMAGE_TAG = params.GO_VERSION
-			currentBuild.displayName = "#${env.BUILD_NUMBER} go-1.26"
-			currentBuild.description = "go-builder:1.26, commit ${env.GIT_SHA}"
+			currentBuild.displayName = "#${env.BUILD_NUMBER} go-1.26.1"
+			currentBuild.description = "go-builder:1.26.1, commit ${env.GIT_SHA}"
 		    }
 
 		    sh '''
-            echo "GO_VERSION=1.26"
-            echo "IMAGE=${IMAGE_NAME}:${IMAGE_TAG}"
+            echo "GO_VERSION=1.26.1"
+            echo "IMAGE=${IMAGE_NAME}:1.26.1"
             ls -la
           '''
 		}
@@ -64,7 +64,7 @@ spec:
             /kaniko/executor \
               --context "${WORKSPACE}" \
               --dockerfile "${WORKSPACE}/go-builder/Dockerfile" \
-              --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
+              --destination "${IMAGE_NAME}:1.26.1" \
               --insecure \
               --skip-tls-verify \
               --insecure-registry registry.lab.local
