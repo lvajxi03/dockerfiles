@@ -1,0 +1,81 @@
+pipeline {
+    agent {
+	kubernetes {
+	    yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  hostAliases:
+      - ip: "10.10.10.24"
+        hostnames:
+          - "registry.lab.local"
+  containers:
+    - name: base
+      image: registry.lab.local/base-builder:0.1
+      command: ["sleep"]
+      args: ["infinity"]
+    - name: kaniko
+      image: registry.lab.local/kaniko-builder:latest
+      command: ["sleep"]
+      args: ["infinity"]
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
+  volumes:
+    - name: docker-config
+      configMap:
+        name: kaniko-docker-config
+'''
+	}
+    }
+
+    environment {
+	IMAGE_NAME = 'registry.lab.local/jenkins-custom'
+	IMAGE_TAG = '0.0'
+    }
+
+    stages {
+	stage('Prepare') {
+	    steps {
+		container('base') {
+		    script {
+			env.GIT_SHA = sh(
+			    script: 'git rev-parse --short HEAD',
+			    returnStdout: true
+			).trim()
+
+			currentBuild.displayName = "#${env.BUILD_NUMBER} jenkins-custom:${env.IMAGE_TAG}"
+			currentBuild.description = "jenkins-custom:${env.IMAGE_TAG}, commit ${env.GIT_SHA}"
+		    }
+
+		    sh '''
+            echo "IMAGE=${IMAGE_NAME}:${IMAGE_TAG}"
+            ls -la
+          '''
+		}
+	    }
+	}
+
+	stage('Build and push image') {
+	    steps {	
+		container('kaniko') {
+		    sh '''
+            /kaniko/executor \
+              --context "${WORKSPACE}" \
+              --dockerfile "${WORKSPACE}/jenkins-custom/Dockerfile" \
+              --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
+              --insecure \
+              --skip-tls-verify \
+              --insecure-registry registry.lab.local
+          '''
+		}
+	    }
+	}
+    }
+
+    post {
+	success {
+	    echo "Built and pushed ${IMAGE_NAME}:${IMAGE_TAG}"
+	}
+    }
+}
