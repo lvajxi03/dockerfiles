@@ -71,7 +71,7 @@ spec:
                         buildah bud \
                           --tls-verify=false \
                           --format docker \
-                          -f "${WORKSPACE}/${DOCKERFILE_PATH}" \
+                          -f "${WORKSPACE}/python-builder/Dockerfile" \
                           -t "${IMAGE_NAME}:${IMAGE_TAG}" \
                           -t "${IMAGE_NAME}:latest" \
                           "${WORKSPACE}"
