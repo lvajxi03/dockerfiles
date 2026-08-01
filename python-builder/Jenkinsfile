@@ -14,17 +14,25 @@ spec:
       image: registry.lab.local/base-builder:0.1
       command: ["sleep"]
       args: ["infinity"]
-    - name: kaniko
-      image: registry.lab.local/kaniko-builder:latest
+    - name: buildah
+      image: registry.lab.local/buildah-builder:latest
       command: ["sleep"]
       args: ["infinity"]
+      securityContext:
+        privileged: true
       volumeMounts:
-        - name: docker-config
-          mountPath: /kaniko/.docker
+        - name: buildah-storage
+          mountPath: /var/lib/containers
+        - name: registries-conf
+          mountPath: /etc/containers/registries.conf
+          subPath: registries.conf
+
   volumes:
-    - name: docker-config
+    - name: buildah-storage
+      emptyDir: {}
+    - name: registries-conf
       configMap:
-        name: kaniko-docker-config
+        name: buildah-registries-conf
 '''
 	}
     }
@@ -56,21 +64,37 @@ spec:
 	    }
 	}
 
-	stage('Build and push image') {
-	    steps {	
-		container('kaniko') {
-		    sh '''
-            /kaniko/executor \
-              --context "${WORKSPACE}" \
-              --dockerfile "${WORKSPACE}/python-builder/Dockerfile" \
-              --destination "${IMAGE_NAME}:${IMAGE_TAG}" \
-              --insecure \
-              --skip-tls-verify \
-              --insecure-registry registry.lab.local
-          '''
-		}
-	    }
-	}
+        stage('Build image') {
+            steps {
+                container('buildah') {
+                    sh '''
+                        buildah bud \
+                          --tls-verify=false \
+                          --format docker \
+                          -f "${WORKSPACE}/${DOCKERFILE_PATH}" \
+                          -t "${IMAGE_NAME}:${IMAGE_TAG}" \
+                          -t "${IMAGE_NAME}:latest" \
+                          "${WORKSPACE}"
+                    '''
+                }
+            }
+        }
+
+        stage('Push image') {
+            steps {
+                container('buildah') {
+                    sh '''
+                        buildah push \
+                          --tls-verify=false \
+                          "${IMAGE_NAME}:${IMAGE_TAG}"
+
+                        buildah push \
+                          --tls-verify=false \
+                          "${IMAGE_NAME}:latest"
+                    '''
+                }
+            }
+        }
     }
 
     post {
