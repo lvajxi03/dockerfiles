@@ -28,4 +28,3 @@ USER builder
 WORKDIR /workspace
 
 CMD ["sleep", "infinity"]
-

@@ -1,0 +1,118 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  hostAliases:
+    - ip: "10.10.10.24"
+      hostnames:
+        - "registry.lab.local"
+
+  containers:
+    - name: buildah
+      image: registry.lab.local/buildah-builder:latest
+      command: ["sleep"]
+      args: ["infinity"]
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: buildah-storage
+          mountPath: /var/lib/containers
+        - name: registries-conf
+          mountPath: /etc/containers/registries.conf
+          subPath: registries.conf
+
+  volumes:
+    - name: buildah-storage
+      emptyDir: {}
+    - name: registries-conf
+      configMap:
+        name: buildah-registries-conf
+'''
+        }
+    }
+
+    environment {
+        IMAGE_NAME = 'registry.lab.local/buildah-builder'
+        IMAGE_TAG = 'v1.43.1'
+        DOCKERFILE_PATH = 'buildah-builder/Dockerfile'
+    }
+
+    stages {
+        stage('Check buildah') {
+            steps {
+                container('buildah') {
+                    sh '''
+                        buildah version
+                        buildah info
+                    '''
+                }
+            }
+        }
+
+        stage('Prepare metadata') {
+            steps {
+                container('buildah') {
+		    sh '''
+                        git config --global --add safe.directory '*'
+                    '''
+                    script {
+                        env.GIT_SHA = sh(
+                            script: 'git rev-parse --short HEAD',
+                            returnStdout: true
+                        ).trim()
+
+                        currentBuild.displayName = "#${env.BUILD_NUMBER} ${env.IMAGE_TAG}"
+                        currentBuild.description = "${env.IMAGE_NAME}:${env.IMAGE_TAG}, commit ${env.GIT_SHA}"
+                    }
+
+                    sh '''
+                        echo "IMAGE=${IMAGE_NAME}:${IMAGE_TAG}"
+                        echo "DOCKERFILE=${DOCKERFILE_PATH}"
+                        ls -la
+                    '''
+                }
+            }
+        }
+
+        stage('Build image') {
+            steps {
+                container('buildah') {
+                    sh '''
+                        buildah bud \
+                          --tls-verify=false \
+                          --format docker \
+                          -f "${WORKSPACE}/${DOCKERFILE_PATH}" \
+                          -t "${IMAGE_NAME}:${IMAGE_TAG}" \
+                          -t "${IMAGE_NAME}:latest" \
+                          "${WORKSPACE}"
+                    '''
+                }
+            }
+        }
+
+        stage('Push image') {
+            steps {
+                container('buildah') {
+                    sh '''
+                        buildah push \
+                          --tls-verify=false \
+                          "${IMAGE_NAME}:${IMAGE_TAG}"
+
+                        buildah push \
+                          --tls-verify=false \
+                          "${IMAGE_NAME}:latest"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Built and pushed ${IMAGE_NAME}:${IMAGE_TAG} and ${IMAGE_NAME}:latest"
+        }
+    }
+}

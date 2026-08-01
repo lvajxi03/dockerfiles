@@ -31,7 +31,7 @@ spec:
 
     environment {
 	IMAGE_NAME = 'registry.lab.local/python-builder'
-	IMAGE_TAG = '3'
+	IMAGE_TAG = '3.11.1'
     }
 
     stages {
